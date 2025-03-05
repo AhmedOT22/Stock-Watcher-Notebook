@@ -1,4 +1,4 @@
-<h1>Portfolio Management and Visualization</h1>
+<h1>Stock Watcher Notebook</h1>
 
 <h2>Overview</h2>
 
