@@ -32,15 +32,40 @@ class Portfolio:
         return self.portfolio
 
     def fetch_stock_prices(self):
-        return {symbol: yf.Ticker(symbol).history(period="1d")['Close'].iloc[-1] for symbol in self.portfolio}
-
+        prices = {}
+        for symbol in self.portfolio:
+            try:
+                stock = yf.Ticker(symbol)
+                price = stock.history(period="1d")["Close"].iloc[-1]
+                prices[symbol] = float(price) 
+            except Exception as e:
+                print(f"Error fetching price for {symbol}: {e}")
+                prices[symbol] = None  # Handle missing data gracefully
+        return prices
+        
     def visualize(self):
         stock_prices = self.fetch_stock_prices()
-        worth_per_stock = {symbol: price * shares for symbol, (price, shares) in zip(stock_prices.keys(), self.portfolio.items()) if price is not None}
+        worth_per_stock = {}
+    
+        for symbol, shares in self.portfolio.items():
+            price = stock_prices.get(symbol)
+            if price is not None:
+                try:
+                    worth_per_stock[symbol] = float(price) * shares
+                except ValueError:
+                    print(f"Skipping {symbol} due to invalid price data.")
+    
         total_worth = sum(worth_per_stock.values())
-        if worth_per_stock:
-            plt.figure(figsize=(8, 8))
-            plt.pie(worth_per_stock.values(), labels=worth_per_stock.keys(), autopct='%1.1f%%', startangle=140, colors=plt.cm.tab20.colors)
-            plt.title(f'Portfolio Allocation\\n (Total Value: ${total_worth:,.2f})')
-            plt.axis('equal')
-            plt.show()
+    
+        if not worth_per_stock:
+            print("No valid stock price data available for visualization.")
+            return
+    
+        plt.figure(figsize=(8, 8))
+        plt.pie(
+            worth_per_stock.values(), labels=worth_per_stock.keys(),
+            autopct='%1.1f%%', startangle=140, colors=plt.cm.tab20.colors
+        )
+        plt.title(f'Portfolio Allocation\n(Total Value: ${total_worth:,.2f})')
+        plt.axis('equal')
+        plt.show()
