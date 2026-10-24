@@ -1,25 +1,31 @@
+import math
+from config import PORTFOLIO_FILE
+from utils.file_manager import load_json, save_json
 import json
 import os
 import yfinance as yf
 import matplotlib.pyplot as plt
 
 class Portfolio:
-    def __init__(self, filename="portfolio.json"):
+    def __init__(self, filename=PORTFOLIO_FILE):
         self.filename = filename
         self.portfolio = self._load_portfolio()
 
     def _load_portfolio(self):
-        if os.path.exists(self.filename):
-            with open(self.filename, 'r') as file:
-                return json.load(file)
-        return {}
+        value = load_json(self.filename, {})
+        if not isinstance(value, dict):
+            raise ValueError("Invalid portfolio JSON structure.")
+        return value
 
     def _save_portfolio(self):
-        with open(self.filename, 'w') as file:
-            json.dump(self.portfolio, file)
+        save_json(self.filename, self.portfolio)
 
     def add(self, symbol, shares):
-        symbol = symbol.upper()
+        if isinstance(shares, bool) or not isinstance(shares, (int, float)) or not math.isfinite(shares) or shares <= 0:
+            raise ValueError("Shares must be a finite positive number.")
+        symbol = str(symbol).strip().upper()
+        if not symbol:
+            raise ValueError("Stock symbol cannot be empty.")
         self.portfolio[symbol] = self.portfolio.get(symbol, 0) + shares
         self._save_portfolio()
 
@@ -29,7 +35,7 @@ class Portfolio:
             self._save_portfolio()
 
     def view(self):
-        return self.portfolio
+        return self.portfolio.copy()
 
     def fetch_stock_prices(self):
         prices = {}
@@ -57,7 +63,7 @@ class Portfolio:
     
         total_worth = sum(worth_per_stock.values())
     
-        if not worth_per_stock:
+        if not worth_per_stock or total_worth <= 0:
             print("No valid stock price data available for visualization.")
             return
     

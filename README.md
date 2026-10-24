@@ -1,46 +1,37 @@
-<h1>Stock Watcher Notebook</h1>
+# Stock Watcher Notebook
 
-<h2>Overview</h2>
+Python tools for retrieving historical stock prices, calculating SMA/EMA/ATR and returns, and managing a local watchlist and share portfolio. Includes a notebook and a runnable example script.
 
-This project allows users to manage a stock portfolio and watchlist. It provides the ability to add, remove, and update stock symbols in both the portfolio and watchlist, fetch real-time stock prices, and visualize the portfolio's allocation. The project leverages the yfinance API to fetch stock data and uses Python's matplotlib for data visualization.
+## Setup and usage
 
-<h2>Features:</h2>
-<ul>
-  <li><strong>Simple Stock Analysis Tool:</strong>
-    <ul>
-      <li>Retrieve historical data of a stock from a specified period.</li>
-      <li>Calculate key metrics to analyze the stock such as SMA, EMA, ATR, and Daily Return.</li>
-      <li>Visualize real-time stock prices for all stocks in the watchlist on a time series graph.</li>
-    </ul>
-  </li>
-    
-  <li><strong>Watchlist Management:</strong>
-    <ul>
-      <li>Add, remove, and view stock symbols in the watchlist.</li>
-      <li>Fetch real-time stock data for each stock in the watchlist.</li>
-      <li>Visualize real-time stock prices for all stocks in the watchlist on a time series graph.</li>
-    </ul>
-  </li>
-    
-  <li><strong>Portfolio Management:</strong>
-    <ul>
-      <li>Add, update, and remove stock symbols with the number of shares owned.</li>
-      <li>View the current stock holdings and share quantities in the portfolio.</li>
-      <li>Fetch the latest stock prices and calculate the current value of each stock in the portfolio.</li>
-      <li>Visualize the portfolio’s allocation using a pie chart, displaying the relative value of each stock holding.</li>
-    </ul>
-  </li>
-</ul>
+Use Python 3.11+ from the repository root:
 
-<h2>Requirements:</h2>
-<p>To run the project, the following dependencies are required:</p>
-<ul>
-  <li>Python 3.8 or higher</li>
-  <li>yfinance library for stock data fetching</li>
-  <li>matplotlib library for data visualization</li>
-  <li>json module</li>
-  <li>os module</li>
-</ul>
+```bash
+git clone https://github.com/AhmedOT22/Stock-Watcher-Notebook.git
+cd Stock-Watcher-Notebook
+python -m venv .venv
+# macOS/Linux:
+source .venv/bin/activate
+# Windows PowerShell instead: .venv\Scripts\Activate.ps1
+python -m pip install -r requirements-dev.txt
+python main.py
+python -m pytest -q
+```
 
-<h2>Author:</h2>
-<p>Ahmed Ouazzani - <a href="https://github.com/AhmedOT22" target="_blank">GitHub Profile</a></p>
+`main.py` downloads and plots a historical AAPL example without modifying saved holdings. Override it with `python main.py --symbol MSFT --start 2024-01-01 --end 2024-12-31`. The end date is exclusive. Manage watchlist and portfolio entries explicitly through their classes. To open `notebook/main.ipynb`, install Jupyter separately and select this environment as its kernel.
+
+Network access is needed for price downloads. Quote freshness depends on the upstream service; “latest retrieved” does not mean a guaranteed real-time feed. The downloader explicitly requests adjusted prices, normalizes single-ticker MultiIndex columns, and rejects empty responses. Return values are fractional changes, and early rolling-window indicators have expected missing warm-up values.
+
+## Local storage
+
+`config.py` anchors the existing root `portfolio.json` and `watchlist.json` files to the repository, so launching from another directory does not select a different holdings file. The older `data/` JSON copies are preserved and are not merged or used by default. Custom filenames remain supported by both classes.
+
+Writes create parent directories and use a temporary file plus atomic replacement. Malformed JSON raises an error instead of silently resetting saved data. This avoids partial file replacement but does not provide multi-process transaction locking. Back up holdings before using multiple writers.
+
+Symbols are trimmed and uppercased. Added share quantities must be finite positive numbers. `view()` returns a copy so callers cannot accidentally modify internal holdings without saving. No brokerage orders are placed.
+
+## Tests
+
+The offline suite checks persistence, invalid share quantities, corrupt-file preservation, single-ticker download normalization, empty downloads, and indicator calculations without mutating price inputs. Download responses are mocked: live network availability and quote correctness are not verified by these tests.
+
+Developed by [Ahmed Ouazzani](https://github.com/AhmedOT22).

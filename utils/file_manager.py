@@ -1,34 +1,30 @@
+"""JSON persistence: reject corrupt inputs and replace files atomically."""
 import json
 import os
-from config import WATCHLIST_FILE  
+import tempfile
+from pathlib import Path
 
 
 def load_json(filename, default_data=None):
-    """
-    Load data from a JSON file.
+    path = Path(filename)
+    if not path.exists():
+        return default_data if default_data is not None else {}
+    with path.open(encoding='utf-8') as handle:
+        return json.load(handle)
 
-    Parameters:
-        filename (str): The JSON file to load.
-        default_data (any): The default data if the file doesn't exist.
-
-    Returns:
-        dict or list: The loaded data.
-    """
-    if os.path.exists(filename):
-        try:
-            with open(filename, 'r') as file:
-                return json.load(file)
-        except json.JSONDecodeError:
-            print(f"Error decoding {filename}. Resetting to default.")
-    return default_data if default_data is not None else {}
 
 def save_json(filename, data):
-    """
-    Save data to a JSON file.
-
-    Parameters:
-        filename (str): The JSON file to save to.
-        data (dict or list): The data to save.
-    """
-    with open(filename, 'w') as file:
-        json.dump(data, file, indent=4)
+    path = Path(filename)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=path.parent,
+                                         prefix=path.name + '.', suffix='.tmp', delete=False) as handle:
+            temporary = Path(handle.name)
+            json.dump(data, handle, indent=2, allow_nan=False)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
